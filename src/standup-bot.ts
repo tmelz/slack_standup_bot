@@ -110,7 +110,10 @@ export namespace StandupBot {
     Slack.postMessage(config.channelId, standupMessage);
   }
 
-  export function sendStandupNudges(config: Config.StandupConfig) {
+  export function sendStandupNudges(
+    config: Config.StandupConfig,
+    event: GoogleAppsScript.Calendar.Schema.Event
+  ) {
     const threadMessages = getRecentStandupThreadWithMessages(config.channelId);
     if (threadMessages === undefined || threadMessages.length === 0) {
       Log.log("No messages found in thread; should have at least initial post");
@@ -122,8 +125,12 @@ export namespace StandupBot {
       threadMessages[0].ts!
     );
 
-    const mentionedUserIds = getUserIdMentionsFromMessage(threadMessages[0]);
-    Log.log(`Mentioned users: ${mentionedUserIds.join(", ")}`);
+    const availabilities = getUserAvailabilityForStandup(
+      config.userGroupId,
+      event
+    );
+    const onlineUsers = availabilities.working.map((user) => user.id!);
+    Log.log(`Online users: ${onlineUsers.join(", ")}`);
     const respondedUserIds = threadMessages
       .map((message) => message.user)
       .filter(
@@ -132,7 +139,7 @@ export namespace StandupBot {
     Log.log(`Responded users: ${respondedUserIds.join(", ")}`);
 
     // Filter out users who have already responded
-    const usersToNudge = mentionedUserIds.filter(
+    const usersToNudge = onlineUsers.filter(
       (userId) => !respondedUserIds.includes(userId)
     );
 
@@ -150,7 +157,10 @@ export namespace StandupBot {
       Slack.sendDirectMessage(userId, nudgeMessage);
     });
 
-    Log.log(`Sent nudges to users: ${usersToNudge.join(", ")}`);
+    const nudgeNames = availabilities.working
+      .filter((user) => usersToNudge.includes(user.id!))
+      .map((user) => user.profile?.real_name);
+    Log.log(`Sent nudges to users: ${nudgeNames.join(", ")}`);
   }
 
   export function getUserIdMentionsFromMessage(
@@ -218,14 +228,21 @@ export namespace StandupBot {
 
     return undefined;
   }
-
-  export function getUserRollcallMessage(
+  export function getUserAvailabilityForStandup(
     userGroupId: string,
     event: GoogleAppsScript.Calendar.Schema.Event
-  ): string {
+  ): { working: User[]; ooo: User[] } {
+    const cacheKey = `${userGroupId}-${event.id}`;
+    const cache = CacheService.getScriptCache();
+
+    const cachedAvailability = cache.get(cacheKey);
+    if (cachedAvailability) {
+      return JSON.parse(cachedAvailability);
+    }
+
     const users = Slack.getUsersFromGroup(userGroupId);
-    Log.log(`Users: ${JSON.stringify(users)}`);
-    const outOfOfficeUsers: User[] = [];
+    const ooo: User[] = [];
+
     for (const user of users) {
       const userEmail = user.profile?.email;
       if (userEmail === undefined) {
@@ -233,21 +250,35 @@ export namespace StandupBot {
         continue;
       }
       if (CheckOOO.checkIsOOODuringEvent(event, userEmail)) {
-        outOfOfficeUsers.push(user);
+        ooo.push(user);
       }
     }
-    const inOfficeUsers = users.filter(
-      (user) => !outOfOfficeUsers.includes(user)
-    );
+
+    const working = users.filter((user) => !ooo.includes(user));
+    const availability = { working, ooo };
+
+    // 3 hours
+    cache.put(cacheKey, JSON.stringify(availability), 10800);
+
+    return availability;
+  }
+
+  export function getUserRollcallMessage(
+    userGroupId: string,
+    event: GoogleAppsScript.Calendar.Schema.Event
+  ): string {
+    const availabilities = getUserAvailabilityForStandup(userGroupId, event);
 
     let message =
-      "Rollcall: " +
-      inOfficeUsers.map((user) => `<@${user.id}>`).join(", ") +
+      "Folks working today: " +
+      availabilities.working
+        .map((user) => `${user.profile?.real_name}`)
+        .join(", ") +
       "\n\n";
-    if (outOfOfficeUsers.length > 0) {
+    if (availabilities.ooo.length > 0) {
       message +=
-        "(Excluded these OOO folks: " +
-        outOfOfficeUsers
+        "(OOO folks: " +
+        availabilities.ooo
           .map((user) => `${user.profile?.real_name}`)
           .join(", ") +
         ")";

@@ -27,7 +27,7 @@ export namespace Orchestrator {
       } else if (standupPhase === StandupBot.StandupPhase.Start) {
         StandupBot.postStandupThread(config, standup);
       } else if (standupPhase === StandupBot.StandupPhase.Nudge) {
-        StandupBot.sendStandupNudges(config);
+        StandupBot.sendStandupNudges(config, standup);
       } else if (standupPhase === StandupBot.StandupPhase.Finish) {
         if (config.notesDocumentUrl === "") {
           Log.log("No docUrl found");
