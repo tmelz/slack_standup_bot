@@ -5,6 +5,6 @@
 import { Orchestrator } from "./orchestrator";
 
 export function debug() {
-  const date = new Date("2024-08-19T21:00:05.710Z");
+  const date = new Date("2024-08-27T21:00:25.291Z");
   Orchestrator.runStandups(date);
 }
