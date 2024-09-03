@@ -88,11 +88,11 @@ export namespace StandupBot {
   }
 
   function isRoughlyThisTime(desiredTime: Date, currentTime: Date): boolean {
-    // Check if the current time is within ±3 minutes of the standup time
-    const threeMinutes = 3 * 60 * 1000; // 3 minutes in milliseconds
-    return (
-      Math.abs(desiredTime.getTime() - currentTime.getTime()) <= threeMinutes
-    );
+    // Check if the current time is within +4 minutes of the standup time
+    const fourMinutes = 4 * 60 * 1000;
+    // intentionally only return true if desiredTime is in the future next 4m
+    const delta = desiredTime.getTime() - currentTime.getTime();
+    return delta > 0 && delta <= fourMinutes;
   }
 
   export function postStandupThread(
