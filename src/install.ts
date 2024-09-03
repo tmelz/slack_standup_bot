@@ -19,7 +19,7 @@ export function runStandups() {
   const hour = now.getHours();
 
   // Check if the current day is Monday (1) through Friday (5) and time is between 9 AM and 5 PM
-  if (day >= 1 && day <= 5 && hour >= 9 && hour <= 17) {
+  if (day >= 1 && day <= 5 && hour >= 6 && hour <= 18) {
     // Code to execute every 5 minutes during the specified time and days
     console.log("Running standup checks...");
     Orchestrator.runStandups();
