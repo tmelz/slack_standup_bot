@@ -11,6 +11,7 @@ import { GoogleDoc } from "./gdoc";
 export namespace StandupBot {
   export enum StandupPhase {
     Start,
+    DelayedStart,
     Nudge,
     Finish,
   }
@@ -53,6 +54,7 @@ export namespace StandupBot {
     config: Config.StandupConfig,
     currentTime: Date,
     standup: GoogleAppsScript.Calendar.Schema.Event
+    wasStandupPostedAlready: boolean,
   ): StandupBot.StandupPhase | undefined {
     if (
       standup?.start?.dateTime === undefined ||
@@ -68,6 +70,13 @@ export namespace StandupBot {
       Log.log(`Is roughly standup start time! ${standupStart.toISOString()}`);
       return StandupPhase.Start;
     } else {
+      // check if standupStart was in the last 10 minutes
+      const tenMinutesAgo = new Date(currentTime.getTime() - 10 * 60 * 1000);
+      if (!wasStandupPostedAlready && standupStart.getTime() >= tenMinutesAgo.getTime() && standupStart.getTime() <= currentTime.getTime()) {
+        Log.log(`Standup start was in the last 10 minutes but we didn't post :(`);
+        return StandupPhase.DelayedStart;
+      }
+
       for (const reminderOffset of config.reminderOffsets) {
         const reminderTime = new Date(standupStart);
         reminderTime.setMinutes(reminderTime.getMinutes() + reminderOffset);

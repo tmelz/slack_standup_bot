@@ -19,12 +19,17 @@ export namespace Orchestrator {
       const standupPhase = StandupBot.getStandupPhase(
         config,
         currentTime,
-        standup
+        standup,
+
+        StandupBot.getRecentStandupThreadOrMessage(config.channelId) !==
+          undefined
       );
       if (standupPhase === undefined) {
         Log.log("No standup phase found");
         continue;
       } else if (standupPhase === StandupBot.StandupPhase.Start) {
+        StandupBot.postStandupThread(config, standup);
+      } else if (standupPhase === StandupBot.StandupPhase.DelayedStart) {
         StandupBot.postStandupThread(config, standup);
       } else if (standupPhase === StandupBot.StandupPhase.Nudge) {
         StandupBot.sendStandupNudges(config, standup);
