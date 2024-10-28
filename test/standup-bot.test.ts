@@ -12,3 +12,21 @@ describe("StandupBot.getUserIdMentionsFromMessage", () => {
     ]);
   });
 });
+
+describe("StandupBot.isRoughlyThisTime", () => {
+  test("is roughly this time", () => {
+    expect(
+      StandupBot.isRoughlyThisTime(
+        new Date("Oct 28, 2024, 9:20:00 AM"),
+        new Date("Oct 28, 2024, 9:17:21 AM")
+      )
+    ).toEqual(true);
+
+    expect(
+      StandupBot.isRoughlyThisTime(
+        new Date("Oct 28, 2024, 9:17:21 AM"),
+        new Date("Oct 28, 2024, 9:20:00 AM")
+      )
+    ).toEqual(false);
+  });
+});

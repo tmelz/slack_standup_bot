@@ -53,8 +53,8 @@ export namespace StandupBot {
   export function getStandupPhase(
     config: Config.StandupConfig,
     currentTime: Date,
-    standup: GoogleAppsScript.Calendar.Schema.Event
-    wasStandupPostedAlready: boolean,
+    standup: GoogleAppsScript.Calendar.Schema.Event,
+    wasStandupPostedAlready: boolean
   ): StandupBot.StandupPhase | undefined {
     if (
       standup?.start?.dateTime === undefined ||
@@ -72,12 +72,19 @@ export namespace StandupBot {
     } else {
       // check if standupStart was in the last 10 minutes
       const tenMinutesAgo = new Date(currentTime.getTime() - 10 * 60 * 1000);
-      if (!wasStandupPostedAlready && standupStart.getTime() >= tenMinutesAgo.getTime() && standupStart.getTime() <= currentTime.getTime()) {
-        Log.log(`Standup start was in the last 10 minutes but we didn't post :(`);
+      if (
+        !wasStandupPostedAlready &&
+        standupStart.getTime() >= tenMinutesAgo.getTime() &&
+        standupStart.getTime() <= currentTime.getTime()
+      ) {
+        Log.log(
+          `Standup start was in the last 10 minutes but we didn't post :(`
+        );
         return StandupPhase.DelayedStart;
       }
 
       for (const reminderOffset of config.reminderOffsets) {
+        Log.log("Checking reminder offset: " + reminderOffset);
         const reminderTime = new Date(standupStart);
         reminderTime.setMinutes(reminderTime.getMinutes() + reminderOffset);
         if (isRoughlyThisTime(reminderTime, currentTime)) {
@@ -96,7 +103,13 @@ export namespace StandupBot {
     return undefined;
   }
 
-  function isRoughlyThisTime(desiredTime: Date, currentTime: Date): boolean {
+  export function isRoughlyThisTime(
+    desiredTime: Date,
+    currentTime: Date
+  ): boolean {
+    Log.log(
+      `Checking if desired time (${desiredTime.toISOString()}) is roughly now (${currentTime.toISOString()}), within +4 minutes`
+    );
     // Check if the current time is within +4 minutes of the standup time
     const fourMinutes = 4 * 60 * 1000;
     // intentionally only return true if desiredTime is in the future next 4m
